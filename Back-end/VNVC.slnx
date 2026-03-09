@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="VNVC.Application/VNVC.Application.csproj" />
+  <Project Path="VNVC.Domain/VNVC.Domain.csproj" />
+  <Project Path="VNVC.Infrastructure/VNVC.Infrastructure.csproj" />
+  <Project Path="VNVC.Model/VNVC.Models.csproj" Id="ee9dcff9-eca1-4e07-8f4f-e6ab9c9e4baa" />
+  <Project Path="VNVC.WebAPI/VNVC.WebAPI.csproj" />
+</Solution>

@@ -1,0 +1,25 @@
+{
+  "login": {
+    "title": "Đăng nhập",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "forgot_password": "Quên mật khẩu?",
+    "login_button": "Đăng nhập",
+    "or": "hoặc",
+    "new_user": "Người dùng mới?",
+    "register": "Đăng ký",
+    "system_name": "🚀 Hệ thống quản lý tiêm chủng."
+  },
+  "menu": {
+    "dashboard": "Bảng điều khiển",
+    "customers": "Khách hàng",
+    "vaccines": "Vắc xin",
+    "appointments": "Lịch hẹn",
+    "screening": "Khám sàng lọc",
+    "injection": "Phòng tiêm",
+    "payment": "Thu ngân",
+    "inventory": "Kho dược",
+    "reports": "Báo cáo",
+    "logout": "Đăng xuất"
+  }
+}

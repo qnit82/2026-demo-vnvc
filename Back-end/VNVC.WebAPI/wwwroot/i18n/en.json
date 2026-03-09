@@ -1,0 +1,25 @@
+{
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "forgot_password": "Forgot password?",
+    "login_button": "Login",
+    "or": "or",
+    "new_user": "New user?",
+    "register": "Register",
+    "system_name": "🚀 Vaccination Management System."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "vaccines": "Vaccines",
+    "appointments": "Appointments",
+    "screening": "Screening",
+    "injection": "Injection Room",
+    "payment": "Cashier",
+    "inventory": "Inventory",
+    "reports": "Reports",
+    "logout": "Logout"
+  }
+}

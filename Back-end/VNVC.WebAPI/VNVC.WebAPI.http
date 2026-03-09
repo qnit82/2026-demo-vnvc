@@ -1,0 +1,6 @@
+@VNVC.WebAPI_HostAddress = http://localhost:5276
+
+GET {{VNVC.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

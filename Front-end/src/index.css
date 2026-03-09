@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0a0e17;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #0a0e17;
+}
+
+#root {
+  width: 100%;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  /* Triệt để ẩn các thành phần giao diện chính */
+  .no-print,
+  aside,
+  nav,
+  header,
+  footer,
+  .sidebar-container {
+    display: none !important;
+  }
+
+  /* Loại bỏ background tối của MainLayout và các container cha */
+  body,
+  html,
+  #root,
+  .min-h-screen,
+  main {
+    background-color: white !important;
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-only {
+    display: block !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    position: relative !important;
+    box-shadow: none !important;
+    z-index: 9999 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* CSS cho tính năng Xem trước (Preview) trên Browser */
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  overflow-y: auto;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+}
+
+.preview-content {
+  background: white !important;
+  width: 210mm;
+  min-height: 297mm;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  transform-origin: top center;
+}
+
+.print-only {
+  display: none;
+}
+
+/* Các tiện ích khác */
+.avoid-break {
+  break-inside: avoid;
+}

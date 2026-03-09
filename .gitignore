@@ -1,0 +1,16 @@
+/Back-end/.vs
+/Back-end/VNVC.Application/obj
+/Back-end/VNVC.Application/bin
+/Back-end/VNVC.Domain/obj
+/Back-end/VNVC.Domain/bin
+/Back-end/VNVC.Infrastructure/obj
+/Back-end/VNVC.Infrastructure/bin
+/Back-end/VNVC.Models/obj
+/Back-end/VNVC.Models/bin
+/Back-end/VNVC.Model/obj
+/Back-end/VNVC.Model/bin
+/Back-end/VNVC.WebAPI/obj
+/Back-end/VNVC.WebAPI/bin
+
+/Front-end/node_modules
+/Front-end/dist

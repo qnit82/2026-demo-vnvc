@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using VNVC.Application.DTOs;
 using VNVC.Application.Interfaces;
 using VNVC.Domain.Entities;
 using VNVC.Domain.Enums;
 using VNVC.Infrastructure.Persistence;
-using VNVC.Application.DTOs;
 
 namespace VNVC.Infrastructure.Services;
 
@@ -158,17 +159,15 @@ public class InjectionService : IInjectionService
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            var prescription = await _context.Prescriptions
-                .Include(p => p.ScreeningResult)
-                    .ThenInclude(s => s.Visit)
-                .FirstOrDefaultAsync(p => p.Id == request.PrescriptionId);
+            // 1. Kỹ thuật ATOMIC UPDATE: Đảm bảo chốt chặn Race Condition
+            // Câu lệnh SQL sẽ chỉ chạy nếu QuantityInStock > 0.
+            int rowsAffected = await _context.VaccineBatches
+                .Where(b => b.Id == request.BatchId && b.QuantityInStock > 0)
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.QuantityInStock, b => b.QuantityInStock - 1));
 
-            if (prescription == null) return false;
+            if (rowsAffected == 0) return false; // Hết hàng hoặc sai ID
 
-            var batch = await _context.VaccineBatches.FindAsync(request.BatchId);
-            if (batch == null || batch.QuantityInStock <= 0) return false;
-
-            // 1. Tạo log tiêm
+            // 2. Insert các log mới (Vẫn dùng Change Tracker cho Insert)
             var log = new InjectionLog
             {
                 PrescriptionId = request.PrescriptionId,
@@ -177,37 +176,42 @@ public class InjectionService : IInjectionService
                 InjectionSite = request.InjectionSite,
                 InjectionTime = DateTime.UtcNow
             };
-            _context.InjectionLogs.Add(log);
 
-            // 2. Trừ tồn kho
-            batch.QuantityInStock -= 1;
-
-            // 3. Tự động tạo bản ghi theo dõi (Monitoring)
             var monitoring = new PostInjectionMonitoring
             {
                 InjectionLog = log,
                 StartTime = DateTime.UtcNow,
-                Status = "Monitoring",
-                IsNormal = true
+                Status = "Monitoring"
             };
+
+            _context.InjectionLogs.Add(log);
             _context.PostInjectionMonitorings.Add(monitoring);
+            await _context.SaveChangesAsync();
 
-            // 4. Kiểm tra xem tất cả các mũi trong toa đã tiêm hết chưa để chuyển trạng thái Visit
-            var allPrescriptions = await _context.Prescriptions
-                .Where(p => p.ScreeningResultId == prescription.ScreeningResultId)
-                .Select(p => p.Id)
-                .ToListAsync();
+            // 3. Tối ưu query đếm mũi tiêm (Single Query Metadata)
+            // Gom tất cả metadata cần thiết vào 1 lần query duy nhất.
+            var checkStatusData = await _context.Prescriptions
+                .Where(p => p.Id == request.PrescriptionId)
+                .Select(p => new {
+                    p.ScreeningResultId,
+                    VisitId = p.ScreeningResult.VisitId,
+                    TotalInToa = _context.Prescriptions.Count(p2 => p2.ScreeningResultId == p.ScreeningResultId),
+                    InjectedCount = _context.InjectionLogs.Count(il =>
+                        _context.Prescriptions
+                            .Where(p3 => p3.ScreeningResultId == p.ScreeningResultId)
+                            .Select(p3 => p3.Id)
+                            .Contains(il.PrescriptionId))
+                })
+                .FirstOrDefaultAsync();
 
-            var injectedCount = await _context.InjectionLogs
-                .CountAsync(il => allPrescriptions.Contains(il.PrescriptionId));
-
-            // Nếu mũi hiện tại là mũi cuối cùng (hoặc duy nhất)
-            if (injectedCount + 1 >= allPrescriptions.Count)
+            // 4. Update trạng thái Visit trực tiếp (Không load entity)
+            if (checkStatusData != null && checkStatusData.InjectedCount >= checkStatusData.TotalInToa)
             {
-                prescription.ScreeningResult.Visit.Status = VisitStatus.Monitoring;
+                await _context.Visits
+                    .Where(v => v.Id == checkStatusData.VisitId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.Status, VisitStatus.Monitoring));
             }
 
-            await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             return true;
         }
@@ -217,4 +221,5 @@ public class InjectionService : IInjectionService
             throw;
         }
     }
+
 }

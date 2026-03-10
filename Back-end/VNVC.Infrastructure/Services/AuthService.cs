@@ -25,7 +25,6 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
-        // Sử dụng LinQ để tìm User (Đúng yêu cầu VNVC)
         var user = await _context.Users
             .AsNoTracking() // Tối ưu hóa performance cho Read-only
             .FirstOrDefaultAsync(u => u.Username == request.Username);

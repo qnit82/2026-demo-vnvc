@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using VNVC.Application.DTOs;
 using VNVC.Application.Interfaces;
 using VNVC.Application.Responses;
-using VNVC.Application.DTOs;
+using VNVC.Models.Response.DTO;
 
 namespace VNVC.WebAPI.Controllers;
 
@@ -38,7 +39,7 @@ public class InjectionController : ControllerBase
     {
         var result = await _injectionService.GetVisitDetailAsync(id);
         if (result == null) return NotFound(ApiBaseResponse<object>.Failure("Không tìm thấy lượt tiêm", "INJECTION_NOT_FOUND"));
-        return Ok(ApiBaseResponse<InjectionVisitDetailDTO>.Ok(result));
+        return Ok(ApiBaseResponse<VisitDetailDto>.Ok(result));
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using VNVC.Application.Interfaces;
 using VNVC.Domain.Entities;
 using VNVC.Domain.Enums;
 using VNVC.Infrastructure.Persistence;
+using VNVC.Models.Response.DTO;
 
 namespace VNVC.Infrastructure.Services;
 
@@ -72,87 +73,44 @@ public class InjectionService : IInjectionService
         };
     }
 
-    public async Task<InjectionVisitDetailDTO?> GetVisitDetailAsync(int visitId)
+    public async Task<VisitDetailDto?> GetVisitDetailAsync(int visitId)
     {
-        var visit = await _context.Visits
+        return await _context.Visits
             .AsNoTracking()
-            .Include(v => v.Customer)
-            .Include(v => v.ScreeningResult)
-                .ThenInclude(s => s.Prescriptions)
-                    .ThenInclude(p => p.Vaccine)
-                        .ThenInclude(v => v.Batches)
-            .FirstOrDefaultAsync(v => v.Id == visitId);
-
-        if (visit == null) return null;
-        
-        // Robust fallback: Nếu Include không tải được (do mapping hoặc dữ liệu cũ), thử tải trực tiếp
-        if (visit.ScreeningResult == null)
-        {
-            visit.ScreeningResult = await _context.ScreeningResults
-                .Include(s => s.Prescriptions)
-                    .ThenInclude(p => p.Vaccine)
-                        .ThenInclude(v => v.Batches)
-                .FirstOrDefaultAsync(s => s.VisitId == visitId);
-        }
-
-        // Nếu thực sự không có kết quả khám sàng lọc (lỗi quy trình)
-        if (visit.ScreeningResult == null)
-        {
-            return new InjectionVisitDetailDTO
+            .Where(v => v.Id == visitId)
+            .Select(v => new VisitDetailDto
             {
-                VisitId = visit.Id,
-                PID = visit.Customer!.PID,
-                FullName = visit.Customer!.FullName,
-                DOB = visit.Customer!.DOB,
-                Gender = visit.Customer!.Gender,
-                MedicalHistory = visit.Customer!.MedicalHistory,
-                DoctorNote = "Chưa có kết quả khám sàng lọc (Vui lòng kiểm tra lại quy trình)",
-                PrescribedVaccines = new List<PrescribedVaccineDTO>()
-            };
-        }
-
-        var prescribedVaccines = new List<PrescribedVaccineDTO>();
-        
-        foreach (var p in visit.ScreeningResult.Prescriptions)
-        {
-            // Kiểm tra xem mũi này đã tiêm chưa
-            var isInjected = await _context.InjectionLogs.AnyAsync(il => il.PrescriptionId == p.Id);
-
-            var availableBatches = p.Vaccine.Batches
-                .Where(b => b.QuantityInStock > 0 && b.ExpiryDate > DateTime.Now)
-                .OrderBy(b => b.ExpiryDate) // FEFO: Hạn dùng gần nhất dùng trước
-                .Select(b => new VaccineBatchDTO
-                {
-                    BatchId = b.Id,
-                    BatchNumber = b.BatchNumber,
-                    ExpiryDate = b.ExpiryDate,
-                    QuantityInStock = b.QuantityInStock
-                })
-                .ToList();
-
-            prescribedVaccines.Add(new PrescribedVaccineDTO
-            {
-                PrescriptionId = p.Id,
-                VaccineId = p.VaccineId,
-                VaccineName = p.Vaccine.Name,
-                DoseNumber = p.DoseNumber,
-                IsInjected = isInjected,
-                AvailableBatches = availableBatches
-            });
-        }
-
-        return new InjectionVisitDetailDTO
-        {
-            VisitId = visit.Id,
-            PID = visit.Customer.PID,
-            FullName = visit.Customer.FullName,
-            DOB = visit.Customer.DOB,
-            Gender = visit.Customer.Gender,
-            MedicalHistory = visit.Customer.MedicalHistory,
-            DoctorNote = visit.ScreeningResult.DoctorNote,
-            PrescribedVaccines = prescribedVaccines
-        };
+                VisitId = v.Id,
+                PID = v.Customer.PID,
+                FullName = v.Customer.FullName,
+                DOB = v.Customer.DOB,
+                Gender = v.Customer.Gender,
+                MedicalHistory = v.Customer.MedicalHistory,
+                DoctorNote = v.ScreeningResult != null ? v.ScreeningResult.DoctorNote : "Chưa có kết quả khám sàng lọc (Vui lòng kiểm tra lại quy trình)",
+                PrescribedVaccines = v.ScreeningResult != null 
+                    ? v.ScreeningResult.Prescriptions.Select(p => new PrescriptionDto
+                    {
+                        PrescriptionId = p.Id,
+                        VaccineId = p.VaccineId,
+                        VaccineName = p.Vaccine.Name,
+                        DoseNumber = p.DoseNumber,
+                        IsInjected = _context.InjectionLogs.Any(il => il.PrescriptionId == p.Id),
+                        AvailableBatches = p.Vaccine.Batches
+                            .Where(b => b.QuantityInStock > 0 && b.ExpiryDate > DateTime.Now)
+                            .OrderBy(b => b.ExpiryDate)
+                            .Select(b => new BatchDto
+                            {
+                                BatchId = b.Id,
+                                BatchNumber = b.BatchNumber,
+                                ExpiryDate = b.ExpiryDate,
+                                QuantityInStock = b.QuantityInStock
+                            }).ToList()
+                    }).ToList()
+                    : new List<PrescriptionDto>()
+            })
+            .FirstOrDefaultAsync();
     }
+
 
     public async Task<bool> ConfirmInjectionAsync(ConfirmInjectionRequest request, int nurseId)
     {

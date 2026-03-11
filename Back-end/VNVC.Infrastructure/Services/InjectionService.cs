@@ -75,7 +75,13 @@ public class InjectionService : IInjectionService
 
     public async Task<VisitDetailDto?> GetVisitDetailAsync(int visitId)
     {
-        return await _context.Visits
+        /**
+        * Lấy thông tin chi tiết của đợt tiêm
+        * @param visitId
+        * @returns VisitDetailDto
+        * Viết theo kiểu Projection DTO thay cho .Include và .ThenInclude nhiều table trước đó (dẽ gây dublicate data và tốn RAM/CPU)
+        */
+        var visit = await _context.Visits
             .AsNoTracking()
             .Where(v => v.Id == visitId)
             .Select(v => new VisitDetailDto
@@ -109,6 +115,8 @@ public class InjectionService : IInjectionService
                     : new List<PrescriptionDto>()
             })
             .FirstOrDefaultAsync();
+
+        return visit;
     }
 
 

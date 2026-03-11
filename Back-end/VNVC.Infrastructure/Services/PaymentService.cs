@@ -23,8 +23,6 @@ public class PaymentService : IPaymentService
         // Sử dụng khoảng thời gian thay vì .Date để an toàn hơn với múi giờ và các loại DB
         var query = _context.Visits
             .AsNoTracking()
-            .Include(v => v.Customer)
-            .Include(v => v.Invoice)
             .Where(v => v.CheckInTime >= queryDate && v.CheckInTime < nextDate);
 
         // Lọc theo trạng thái thanh toán
@@ -41,6 +39,12 @@ public class PaymentService : IPaymentService
 
         var totalCount = await query.CountAsync();
 
+        /**
+        * Câu quey này thể hiện điểm sáng của LINQ Projection (Select)
+        * Không cần .Include() mà vẫn lấy được dữ liệu từ table Customer
+        * Ta dùng .Select(v => new { ... v.Customer.PID ... }), EF Core sẽ thực hiện một cơ chế gọi là Query Projection:
+        * EF Core nhìn vào biểu thức v.Customer.PID =>  Nó biết giữa Visit và Customer có quan hệ (Foreign Key) dựa trên file Visit.cs và cấu hình DbContext.
+        */
         var items = await query
             .OrderByDescending(v => v.CheckInTime)
             .Skip((page - 1) * pageSize)
@@ -69,32 +73,25 @@ public class PaymentService : IPaymentService
 
     public async Task<InvoiceDetailDTO?> GetInvoiceDetailAsync(int visitId)
     {
-        var visit = await _context.Visits
+        return await _context.Visits
             .AsNoTracking()
-            .Include(v => v.Customer)
-            .Include(v => v.Invoice)
-            .Include(v => v.Order)
-                .ThenInclude(o => o.OrderDetails)
-                    .ThenInclude(od => od.Vaccine)
-            .FirstOrDefaultAsync(v => v.Id == visitId);
-
-        if (visit == null || visit.Invoice == null) return null;
-
-        return new InvoiceDetailDTO
-        {
-            VisitId = visit.Id,
-            PID = visit.Customer.PID,
-            FullName = visit.Customer.FullName,
-            Phone = visit.Customer.Phone,
-            TotalAmount = visit.Invoice.TotalAmount,
-            PaymentStatus = (int)visit.Invoice.PaymentStatus,
-            Items = visit.Order?.OrderDetails.Select(od => new InvoiceItemDTO
+            .Where(v => v.Id == visitId && v.Invoice != null)
+            .Select(v => new InvoiceDetailDTO
             {
-                VaccineName = od.Vaccine.Name,
-                Quantity = od.Quantity,
-                UnitPrice = od.UnitPrice
-            }).ToList() ?? new List<InvoiceItemDTO>()
-        };
+                VisitId = v.Id,
+                PID = v.Customer.PID,
+                FullName = v.Customer.FullName,
+                Phone = v.Customer.Phone,
+                TotalAmount = v.Invoice.TotalAmount,
+                PaymentStatus = (int)v.Invoice.PaymentStatus,
+                Items = v.Order != null ? v.Order.OrderDetails.Select(od => new InvoiceItemDTO
+                {
+                    VaccineName = od.Vaccine.Name,
+                    Quantity = od.Quantity,
+                    UnitPrice = od.UnitPrice
+                }).ToList() : new List<InvoiceItemDTO>()
+            })
+            .FirstOrDefaultAsync();
     }
 
     public async Task<bool> ConfirmPaymentAsync(ConfirmPaymentRequest request)
@@ -102,32 +99,37 @@ public class PaymentService : IPaymentService
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            var visit = await _context.Visits
-                .Include(v => v.Invoice)
-                .Include(v => v.Order)
-                .Include(v => v.ScreeningResult)
-                .FirstOrDefaultAsync(v => v.Id == request.VisitId);
+            // 1. Kiểm tra nhanh sự tồn tại và lấy metadata cần thiết
+            var visitData = await _context.Visits
+                .Where(v => v.Id == request.VisitId)
+                .Select(v => new { 
+                    HasInvoice = v.Invoice != null,
+                    HasScreeningResult = v.ScreeningResult != null 
+                })
+                .FirstOrDefaultAsync();
 
-            if (visit == null || visit.Invoice == null) return false;
+            if (visitData == null || !visitData.HasInvoice) return false;
 
-            // 1. Cập nhật Invoice
-            visit.Invoice.PaymentStatus = PaymentStatus.Paid;
-            visit.Invoice.PaymentTime = DateTime.UtcNow;
+            // 2. Cập nhật Invoice trực tiếp
+            await _context.Invoices
+                .Where(i => i.VisitId == request.VisitId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.PaymentStatus, PaymentStatus.Paid)
+                    .SetProperty(i => i.PaymentTime, DateTime.UtcNow));
 
-            // 2. Cập nhật Order (nếu có)
-            if (visit.Order != null)
+            // 3. Cập nhật Order trực tiếp (nếu có)
+            await _context.Orders
+                .Where(o => o.VisitId == request.VisitId)
+                .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Paid));
+
+            // 4. Cập nhật trạng thái Visit (Chỉ chuyển sang WaitInjection nếu đã có kết quả khám)
+            if (visitData.HasScreeningResult)
             {
-                visit.Order.Status = OrderStatus.Paid;
+                await _context.Visits
+                    .Where(v => v.Id == request.VisitId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(v => v.Status, VisitStatus.WaitInjection));
             }
 
-            // 3. Cập nhật trạng thái Visit sang Chờ tiêm (CHỈ KHI ĐÃ KHÁM SÀNG LỌC)
-            // Nếu chưa khám sàng lọc, vẫn để trạng thái cũ (thường là WaitScreening)
-            if (visit.ScreeningResult != null)
-            {
-                visit.Status = VisitStatus.WaitInjection;
-            }
-
-            await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             return true;
         }

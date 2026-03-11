@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 using VNVC.Application.DTOs;
 using VNVC.Application.Interfaces;
 using VNVC.Domain.Entities;
 using VNVC.Domain.Enums;
 using VNVC.Infrastructure.Persistence;
-using VNVC.Models.Response.DTO;
 
 namespace VNVC.Infrastructure.Services;
 
@@ -41,8 +39,8 @@ public class InjectionService : IInjectionService
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = searchTerm.ToLower();
-            query = query.Where(v => 
-                v.Customer.PID.ToLower().Contains(term) || 
+            query = query.Where(v =>
+                v.Customer.PID.ToLower().Contains(term) ||
                 v.Customer.FullName.ToLower().Contains(term)
             );
         }
@@ -93,7 +91,7 @@ public class InjectionService : IInjectionService
                 Gender = v.Customer.Gender,
                 MedicalHistory = v.Customer.MedicalHistory,
                 DoctorNote = v.ScreeningResult != null ? v.ScreeningResult.DoctorNote : "Chưa có kết quả khám sàng lọc (Vui lòng kiểm tra lại quy trình)",
-                PrescribedVaccines = v.ScreeningResult != null 
+                PrescribedVaccines = v.ScreeningResult != null
                     ? v.ScreeningResult.Prescriptions.Select(p => new PrescriptionDto
                     {
                         PrescriptionId = p.Id,
@@ -158,7 +156,8 @@ public class InjectionService : IInjectionService
             // Gom tất cả metadata cần thiết vào 1 lần query duy nhất.
             var checkStatusData = await _context.Prescriptions
                 .Where(p => p.Id == request.PrescriptionId)
-                .Select(p => new {
+                .Select(p => new
+                {
                     p.ScreeningResultId,
                     VisitId = p.ScreeningResult.VisitId,
                     TotalInToa = _context.Prescriptions.Count(p2 => p2.ScreeningResultId == p.ScreeningResultId),
@@ -188,4 +187,46 @@ public class InjectionService : IInjectionService
         }
     }
 
+    /// <summary>
+    /// Lấy dữ liệu tổng hợp cho một đợt tiêm chủng theo ngày.
+    /// Hàm này Join 5 table (có dùng join và left join)
+    /// </summary>
+    public async Task<List<VisitComplexDto>> InjectionReports(DateTime date)
+    {
+        var startDate = date.Date;
+        var endDate = startDate.AddDays(1);
+
+        return await _context.Visits
+            .AsNoTracking()
+            .Where(v => v.CheckInTime >= startDate && v.CheckInTime < endDate)
+            .Select(v => new VisitComplexDto
+            {
+                // 1. INNER JOIN với Customer (Vì Visit bắt buộc phải có Customer)
+                CustomerName = v.Customer.FullName,
+                PID = v.Customer.PID,
+
+                // 2. LEFT JOIN với Invoice (Một lượt khám có thể chưa có hóa đơn)
+                InvoiceAmount = v.Invoice != null ? v.Invoice.TotalAmount : 0,
+                PaymentStatus = v.Invoice != null ? v.Invoice.PaymentStatus : VNVC.Domain.Enums.PaymentStatus.Pending,
+
+                // 3. LEFT JOIN với ScreeningResult & Order
+                DoctorNote = v.ScreeningResult != null ? v.ScreeningResult.DoctorNote : "Chưa có kết quả khám sàng lọc",
+                OrderNumber = v.Order != null ? v.Order.OrderNumber : "N/A",
+
+                // 4. COMPLEX JOIN: Lấy thông tin tiêm (InjectionLog) - Nhiều bảng lồng nhau
+                // Đây là dạng Left Join với tập hợp (Table InjectionLog)
+                InjectionDetails = v.ScreeningResult != null
+                    ? v.ScreeningResult.Prescriptions.Select(p => new InjectionDetailDto
+                    {
+                        VaccineName = p.Vaccine.Name,
+                        // Ở đây dùng Subquery để lấy InjectionSite từ bảng InjectionLogs
+                        InjectionSite = _context.InjectionLogs
+                            .Where(il => il.PrescriptionId == p.Id)
+                            .Select(il => il.InjectionSite)
+                            .FirstOrDefault() ?? "Chưa tiêm"
+                    }).ToList()
+                    : new List<InjectionDetailDto>()
+            })
+            .ToListAsync();
+    }
 }

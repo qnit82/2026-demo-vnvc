@@ -4,7 +4,6 @@ using System.Security.Claims;
 using VNVC.Application.DTOs;
 using VNVC.Application.Interfaces;
 using VNVC.Application.Responses;
-using VNVC.Models.Response.DTO;
 
 namespace VNVC.WebAPI.Controllers;
 
@@ -58,4 +57,5 @@ public class InjectionController : ControllerBase
         if (result) return Ok(ApiBaseResponse<object>.Ok(null, "Xác nhận tiêm thành công"));
         return BadRequest(ApiBaseResponse<object>.Failure("Xác nhận tiêm thất bại (Có thể do hết tồn kho hoặc dữ liệu sai)", "INJECTION_CONFIRM_FAILED"));
     }
+
 }

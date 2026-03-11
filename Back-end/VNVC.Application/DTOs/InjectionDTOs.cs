@@ -49,3 +49,20 @@ public class InjectionQueueResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
 }
+
+public class VisitComplexDto
+{
+    public string CustomerName { get; set; } = string.Empty;
+    public string PID { get; set; } = string.Empty;
+    public decimal InvoiceAmount { get; set; }
+    public VNVC.Domain.Enums.PaymentStatus PaymentStatus { get; set; }
+    public string DoctorNote { get; set; } = string.Empty;
+    public string OrderNumber { get; set; } = string.Empty;
+    public List<InjectionDetailDto> InjectionDetails { get; set; } = new();
+}
+
+public class InjectionDetailDto
+{
+    public string VaccineName { get; set; } = string.Empty;
+    public string InjectionSite { get; set; } = string.Empty;
+}

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   Users,
   Syringe,
@@ -13,20 +12,36 @@ import {
   CheckCircle2,
   Activity
 } from 'lucide-react';
+import { RootState } from '@/store';
+import api from '@/web-configs/api';
 
-const DashboardPage = () => {
+interface DashboardStats {
+  waitScreening: number;
+  waitInjection: number;
+  completedToday: number;
+  waitPayment: number;
+  lowStock: number;
+}
+
+interface BusinessAlert {
+  type: 'Critical' | 'Warning' | 'Success' | 'Info';
+  msg: string;
+  time: string;
+}
+
+const DashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     waitScreening: 0,
     waitInjection: 0,
     completedToday: 0,
     waitPayment: 0,
     lowStock: 0
   });
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [alerts, setAlerts] = useState<BusinessAlert[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchData = async () => {

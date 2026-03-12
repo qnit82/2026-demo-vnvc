@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
   User,
@@ -17,27 +16,46 @@ import {
   Loader2
 } from 'lucide-react';
 import api from '@/web-configs/api';
+import { Customer, Vaccine, Commune } from '@/types';
+import VaccineSelector from '@/components/VaccineSelector';
 import { AppAlert, AppConfirm } from '@/components/AppDialogs';
 import CustomerList from '@/components/CustomerList';
-import VaccineSelector from '@/components/VaccineSelector';
 
-const RegistrationPage = () => {
+interface RegistrationFormData {
+  id: string | null;
+  pid: string;
+  fullName: string;
+  dob: string;
+  gender: string;
+  phone: string;
+  identityCard: string;
+  guardianName: string;
+  guardianPhone: string;
+  guardianRelation: string;
+  address: string;
+  commune: string;
+  province: string;
+  medicalHistory: string;
+  selectedVaccines: Vaccine[];
+  appointmentDate: string;
+}
+
+const RegistrationPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [submitting, setSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Refs for auto-focus
-  const fullNameRef = useRef(null);
-  const communeSearchRef = useRef(null);
-  const medicalHistoryRef = useRef(null);
-  const vaccineSearchRef = useRef(null);
+  const fullNameRef = useRef<HTMLInputElement>(null);
+  const communeSearchRef = useRef<HTMLInputElement>(null);
+  const medicalHistoryRef = useRef<HTMLTextAreaElement>(null);
+  const vaccineSearchRef = useRef<HTMLInputElement>(null);
 
   // Dialog States
-  const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
-  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [alertConfig, setAlertConfig] = useState<any>({ isOpen: false, title: '', message: '', type: 'info' });
+  const [confirmConfig, setConfirmConfig] = useState<any>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegistrationFormData>({
     id: null,
     pid: '',
     fullName: '',
@@ -52,13 +70,13 @@ const RegistrationPage = () => {
     commune: '',
     province: '',
     medicalHistory: '',
-    selectedVaccines: [], // Lưu trữ object vaccine đầy đủ
+    selectedVaccines: [],
     appointmentDate: new Date().toISOString().split('T')[0]
   });
 
-  const [communes, setCommunes] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<Commune[]>([]);
 
   const steps = [
     { id: 1, title: t('registration_steps_personal_info'), icon: <User size={20} /> },
@@ -82,11 +100,11 @@ const RegistrationPage = () => {
     }
   };
 
-  const removeAccents = (str) => {
+  const removeAccents = (str: string) => {
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   };
 
-  const handleSearchCommune = (val) => {
+  const handleSearchCommune = (val: string) => {
     setSearchTerm(val);
     if (!val.trim()) {
       setSuggestions([]);
@@ -106,7 +124,7 @@ const RegistrationPage = () => {
     }
   };
 
-  const selectCommune = (c) => {
+  const selectCommune = (c: Commune) => {
     setFormData(prev => ({
       ...prev,
       commune: c.name,
@@ -116,7 +134,7 @@ const RegistrationPage = () => {
     setSuggestions([]);
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -144,8 +162,7 @@ const RegistrationPage = () => {
     }
   }, [currentStep, isMinor]);
 
-  const handleSelectCustomer = (customer) => {
-    // Tách địa chỉ nếu cần (tạm thời để nguyên field address)
+  const handleSelectCustomer = (customer: Customer) => {
     setFormData({
       ...formData,
       id: customer.id,
@@ -153,13 +170,8 @@ const RegistrationPage = () => {
       fullName: customer.fullName,
       dob: customer.dob.split('T')[0],
       gender: customer.gender,
-      phone: customer.phone,
-      identityCard: customer.identityCard || '',
-      guardianName: customer.guardianName || '',
-      guardianPhone: customer.guardianPhone || '',
-      guardianRelation: customer.guardianRelation || 'Cha',
-      address: customer.address,
-      medicalHistory: customer.medicalHistory || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
     });
     setCurrentStep(1);
     if (fullNameRef.current) fullNameRef.current.focus();
@@ -193,23 +205,22 @@ const RegistrationPage = () => {
       setAlertConfig({
         isOpen: true,
         type: 'warning',
-        title: t('registration_missing_fields_title'),
-        message: t('registration_missing_info')
+        title: t('registration_missing_fields_title') || 'Missing fields',
+        message: t('registration_missing_info') || 'Please fill all required fields'
       });
       return;
     }
 
     setConfirmConfig({
       isOpen: true,
-      title: t('registration_confirm_title'),
-      message: `${t('registration_confirm_msg_full')} ${formData.fullName}?`,
+      title: t('registration_confirm_title') || 'Confirm registration',
+      message: `${t('registration_confirm_msg_full') || 'Register customer'} ${formData.fullName}?`,
       onConfirm: async () => {
         setSubmitting(true);
         try {
           const payload = {
             ...formData,
-            vaccineIds: formData.selectedVaccines.map(v => v.id),
-            // Nếu commune/province đã được chọn, nối vào address
+            vaccineIds: formData.selectedVaccines.map(v => v.vaccineId),
             address: formData.commune ? `${formData.address}, ${formData.commune}, ${formData.province}` : formData.address
           };
 
@@ -218,13 +229,13 @@ const RegistrationPage = () => {
           if (response.data.success) {
             resetForm();
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Registration failed:', error);
-          const errorMsg = error.response?.data?.message || t('registration_error');
+          const errorMsg = error.response?.data?.message || t('registration_error') || 'Registration failed';
           setAlertConfig({
             isOpen: true,
             type: 'error',
-            title: t('common_error'),
+            title: t('common_error') || 'Error',
             message: errorMsg
           });
         } finally {
@@ -232,7 +243,7 @@ const RegistrationPage = () => {
         }
       }
     });
-  }, [formData, resetForm, user.token]);
+  }, [formData, resetForm, t]);
 
   // Auto-focus logic
   useEffect(() => {
@@ -247,38 +258,29 @@ const RegistrationPage = () => {
 
   // Keyboard shortcuts logic
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Nếu có bất kỳ Dialog nào đang mở, không xử lý phím tắt trang
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (alertConfig.isOpen || confirmConfig.isOpen) return;
 
-      // F1: Quay lại - Cho phép chạy dù đang focus vào input nào
       if (e.key === 'F1') {
         e.preventDefault();
         prevStep();
         return;
       }
 
-      // F2: Tiếp theo - Cho phép chạy dù đang focus vào input nào
       if (e.key === 'F2') {
         e.preventDefault();
         if (currentStep < 6) nextStep();
         return;
       }
 
-      // Enter: Xử lý riêng biệt
       if (e.key === 'Enter') {
-        // Nếu đang ở bước 6 và KHÔNG focus vào bất kỳ input nào
         if (currentStep === 6 && !submitting) {
-          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          const target = e.target as HTMLElement;
+          if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
             e.preventDefault();
             handleSubmit();
             return;
           }
-        }
-
-        // Nếu đang focus vào input/textarea ở các bước khác (hoặc bước 6 ô search), Enter sẽ bị chặn (không cho nhảy bước)
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-          return;
         }
       }
     };
@@ -352,7 +354,7 @@ const RegistrationPage = () => {
                     value={formData.identityCard}
                     onChange={handleInputChange}
                     className="w-full bg-dark-bg border border-gray-700 rounded-xl pl-10 pr-4 py-3 focus:border-dark-primary outline-none transition-all"
-                    placeholder={t('enterPID')}
+                    placeholder={t('enterPID') || 'Enter PID...'}
                   />
                 </div>
               </div>
@@ -413,7 +415,7 @@ const RegistrationPage = () => {
                   <input
                     ref={communeSearchRef}
                     type="text"
-                    placeholder={t('enterWard')}
+                    placeholder={t('enterWard') || 'Enter ward...'}
                     className="w-full bg-dark-bg border border-gray-700 rounded-xl pl-10 pr-4 py-3 focus:border-dark-primary outline-none transition-all"
                     value={searchTerm}
                     onChange={(e) => handleSearchCommune(e.target.value)}
@@ -459,7 +461,7 @@ const RegistrationPage = () => {
                   onChange={handleInputChange}
                   rows={3}
                   className="w-full bg-dark-bg border border-gray-700 rounded-xl px-4 py-3 focus:border-dark-primary outline-none transition-all resize-none"
-                  placeholder={t('enterStreet')}
+                  placeholder={t('enterStreet') || 'Enter street...'}
                 />
               </div>
             </div>
@@ -481,7 +483,7 @@ const RegistrationPage = () => {
                   onChange={handleInputChange}
                   rows={6}
                   className="w-full bg-dark-bg border border-gray-700 rounded-xl px-4 py-3 focus:border-dark-primary outline-none transition-all resize-none"
-                  placeholder={t('registration_medical_history_placeholder')}
+                  placeholder={t('registration_medical_history_placeholder') || 'Enter medical history...'}
                 />
               </div>
             </div>
@@ -499,7 +501,7 @@ const RegistrationPage = () => {
               }))}
               onRemoveVaccine={(id) => setFormData(prev => ({
                 ...prev,
-                selectedVaccines: prev.selectedVaccines.filter(v => v.id !== id)
+                selectedVaccines: prev.selectedVaccines.filter(v => v.vaccineId !== id)
               }))}
             />
           </div>
@@ -551,8 +553,8 @@ const RegistrationPage = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-800/50">
                           {formData.selectedVaccines.map(v => (
-                            <tr key={v.id} className="text-gray-300">
-                              <td className="px-4 py-2">{v.name}</td>
+                            <tr key={v.vaccineId} className="text-gray-300">
+                              <td className="px-4 py-2">{v.vaccineName}</td>
                               <td className="px-4 py-2 text-right font-mono text-xs">
                                 {v.price.toLocaleString('vi-VN')} đ
                               </td>
@@ -682,11 +684,11 @@ const RegistrationPage = () => {
       {/* Dialogs */}
       <AppAlert
         {...alertConfig}
-        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setAlertConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
       <AppConfirm
         {...confirmConfig}
-        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setConfirmConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

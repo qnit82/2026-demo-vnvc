@@ -1,28 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { login } from '@/store/authSlice';
+
 import { Globe, Mail, Lock } from 'lucide-react';
+import { AppDispatch, RootState } from '@/store';
+import { login } from '@/store/authSlice';
 
-const LoginPage = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const LoginPage: React.FC = () => {
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const { t, i18n } = useTranslation();
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
 
-  const handleSubmit = (e) => {
+  // Sử dụng AppDispatch để có kiểu dữ liệu cho thunk
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+
+  // Sử dụng RootState để lấy state từ Redux
+  const { loading, error } = useSelector((state: RootState) => state.auth);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    dispatch(login({ username, password })).then((res) => {
+    dispatch(login({ username, password })).then((res: any) => {
       if (res.meta.requestStatus === 'fulfilled') {
         navigate('/');
       }
     });
   };
 
-  const changeLanguage = (lng) => {
+  const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('appLanguage', lng);
   };
@@ -61,10 +67,10 @@ const LoginPage = () => {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
             <input
               type="text"
-              placeholder={t('email')}
+              placeholder={t('email') || 'Email'}
               className="w-full bg-dark-bg border border-gray-700 text-white pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:border-dark-primary transition-colors"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
               required
             />
           </div>
@@ -73,10 +79,10 @@ const LoginPage = () => {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
             <input
               type="password"
-              placeholder={t('password')}
+              placeholder={t('password') || 'Password'}
               className="w-full bg-dark-bg border border-gray-700 text-white pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:border-dark-primary transition-colors"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
             />
           </div>
@@ -92,16 +98,20 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-dark-primary hover:bg-indigo-600 text-white py-3 rounded-xl transition-all transform active:scale-95 disabled:opacity-50"
+            className="w-full bg-dark-primary hover:bg-indigo-600 text-white py-3 rounded-xl transition-all transform active:scale-95 disabled:opacity-50 flex items-center justify-center"
           >
-            {loading ? '...' : t('login_button')}
+            {loading ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : (
+              t('login_button')
+            )}
           </button>
         </form>
 
       </div>
 
-      <footer className="mt-12 text-gray-600 text-sm">
-        © 2026 DEMO APP. All rights reserved.
+      <footer className="mt-12 text-gray-600 text-sm italic">
+        © 2026 VNVC PRO SYSTEM. All rights reserved.
       </footer>
     </div>
   );

@@ -1,20 +1,25 @@
-import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import LoginPage from '@/pages/LoginPage';
-import RegistrationPage from '@/pages/RegistrationPage';
-import ScreeningPage from '@/pages/ScreeningPage';
-import InjectionPage from '@/pages/InjectionPage';
-import PaymentPage from '@/pages/PaymentPage';
-import InventoryPage from '@/pages/InventoryPage';
-import DashboardPage from '@/pages/DashboardPage';
-import ReportPage from '@/pages/ReportPage';
-import MainLayout from '@/components/MainLayout';
 import './i18n';
+import { useSelector } from 'react-redux';
+import { RootState } from './store';
+import { Suspense } from 'react';
+import MainLayout from './components/MainLayout';
+import DashboardPage from './pages/DashboardPage';
+import RegistrationPage from './pages/RegistrationPage';
+import ScreeningPage from './pages/ScreeningPage';
+import InjectionPage from './pages/InjectionPage';
+import PaymentPage from './pages/PaymentPage';
+import InventoryPage from './pages/InventoryPage';
+import ReportPage from './pages/ReportPage';
 
-const PrivateRoute = ({ children }) => {
-  const { user } = useSelector((state) => state.auth);
-  return user ? children : <Navigate to="/login" />;
+interface PrivateRouteProps {
+  children: React.ReactNode;
+}
+
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+  const { user } = useSelector((state: RootState) => state.auth);
+  return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
 

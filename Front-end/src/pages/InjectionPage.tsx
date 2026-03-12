@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   Users,
   Loader2,
@@ -14,28 +12,36 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Receipt
+  X
 } from 'lucide-react';
+import { InjectionQueueItem, InjectionDetail, PrescribedVaccine } from '@/types';
+import api from '@/web-configs/api';
 import { AppAlert, AppConfirm } from '@/components/AppDialogs';
 
-const InjectionPage = () => {
+interface InjectionFormState {
+  [key: string]: {
+    batchId: string;
+    injectionSite: string;
+  };
+}
+
+const InjectionPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState(0); // 0: Chờ tiêm, 1: Đã tiêm
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activeTab, setActiveTab] = useState<number>(0); // 0: Chờ tiêm, 1: Đã tiêm
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 8, totalCount: 0 });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const [queue, setQueue] = useState([]);
-  const [loadingQueue, setLoadingQueue] = useState(false);
-  const [selectedVisit, setSelectedVisit] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [injectionData, setInjectionData] = useState({}); // { prescriptionId: { batchId, injectionSite } }
+  const [queue, setQueue] = useState<InjectionQueueItem[]>([]);
+  const [loadingQueue, setLoadingQueue] = useState<boolean>(false);
+  const [selectedVisit, setSelectedVisit] = useState<InjectionDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [injectionData, setInjectionData] = useState<InjectionFormState>({}); // { prescriptionId: { batchId, injectionSite } }
 
-  const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
-  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [alertConfig, setAlertConfig] = useState<any>({ isOpen: false, title: '', message: '', type: 'info' });
+  const [confirmConfig, setConfirmConfig] = useState<any>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
   const fetchQueue = useCallback(async (page = pagination.page, tab = activeTab, date = selectedDate, search = searchTerm) => {
     setLoadingQueue(true);
@@ -62,7 +68,7 @@ const InjectionPage = () => {
     } finally {
       setLoadingQueue(false);
     }
-  }, [user.token, activeTab, selectedDate, pagination.page, pagination.pageSize]);
+  }, [activeTab, selectedDate, pagination.page, pagination.pageSize, searchTerm]);
 
   useEffect(() => {
     fetchQueue(1, activeTab, selectedDate, searchTerm);
@@ -73,17 +79,17 @@ const InjectionPage = () => {
     return () => clearInterval(interval);
   }, [fetchQueue, pagination.page, activeTab, selectedDate, searchTerm]);
 
-  const handleSelectVisit = async (visit) => {
+  const handleSelectVisit = async (visit: { visitId: string }) => {
     setLoadingDetail(true);
     try {
       const response = await api.get(`/injection/${visit.visitId}`);
       if (response.data.success) {
-        const detail = response.data.data;
+        const detail: InjectionDetail = response.data.data;
         setSelectedVisit(detail);
 
         // Khởi tạo data mặc định cho các mũi chưa tiêm
-        const initialData = {};
-        detail.prescribedVaccines.forEach(p => {
+        const initialData: InjectionFormState = {};
+        detail.prescribedVaccines.forEach((p: PrescribedVaccine) => {
           if (!p.isInjected) {
             initialData[p.prescriptionId] = {
               batchId: p.availableBatches.length > 0 ? p.availableBatches[0].batchId : '',
@@ -98,30 +104,30 @@ const InjectionPage = () => {
       setAlertConfig({
         isOpen: true,
         type: 'error',
-        title: t('common_error'),
-        message: t('injection_not_found', 'Không tìm thấy thông tin lượt tiêm hoặc dữ liệu khám sàng lọc.')
+        title: t('common_error') || 'Error',
+        message: t('injection_not_found') || 'No injection detail found.'
       });
     } finally {
       setLoadingDetail(false);
     }
   };
 
-  const handleConfirmInjection = async (prescriptionId) => {
+  const handleConfirmInjection = async (prescriptionId: string) => {
     const data = injectionData[prescriptionId];
     if (!data || !data.batchId) {
       setAlertConfig({
         isOpen: true,
         type: 'warning',
-        title: t('common_missing_info'),
-        message: t('injection_select_batch_prompt')
+        title: t('common_missing_info') || 'Missing info',
+        message: t('injection_select_batch_prompt') || 'Please select a batch.'
       });
       return;
     }
 
     setConfirmConfig({
       isOpen: true,
-      title: t('injection_confirm_injection_btn'),
-      message: t('injection_confirm_injection_msg'),
+      title: t('injection_confirm_injection_btn') || 'Confirm injection',
+      message: t('injection_confirm_injection_msg') || 'Are you sure you want to confirm this injection?',
       onConfirm: async () => {
         setSubmitting(true);
         try {
@@ -132,8 +138,9 @@ const InjectionPage = () => {
           });
 
           if (response.data.success) {
-            // Tải lại chi tiết để cập nhật trạng thái
-            handleSelectVisit({ visitId: selectedVisit.visitId });
+            if (selectedVisit) {
+              handleSelectVisit({ visitId: selectedVisit.visitId });
+            }
             fetchQueue();
           }
         } catch (error) {
@@ -141,8 +148,8 @@ const InjectionPage = () => {
           setAlertConfig({
             isOpen: true,
             type: 'error',
-            title: t('common_error'),
-            message: t('injection_injection_error')
+            title: t('common_error') || 'Error',
+            message: t('injection_injection_error') || 'Injection failed.'
           });
         } finally {
           setSubmitting(false);
@@ -196,7 +203,7 @@ const InjectionPage = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
               <input
                 type="text"
-                placeholder={t('common_search_placeholder')}
+                placeholder={t('common_search_placeholder') || 'Search...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-dark-bg/80 border border-gray-700/50 rounded-xl py-2 pl-9 pr-4 text-[12px] text-gray-300 focus:border-dark-primary outline-none transition-all"
@@ -365,7 +372,7 @@ const InjectionPage = () => {
                                     [v.prescriptionId]: { ...prev[v.prescriptionId], injectionSite: e.target.value }
                                   }))}
                                   className="w-full bg-dark-bg border border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:border-dark-primary outline-none transition-all"
-                                  placeholder={t('injection_injection_site_placeholder')}
+                                  placeholder={t('injection_injection_site_placeholder') || 'Enter site...'}
                                 />
                               </div>
                             </div>
@@ -407,16 +414,16 @@ const InjectionPage = () => {
 
       <AppAlert
         {...alertConfig}
-        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setAlertConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
       <AppConfirm
         {...confirmConfig}
-        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setConfirmConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
 
       {/* Date Picker Modal */}
       {showDatePicker && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
           <div className="bg-dark-card border border-gray-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-gray-800 flex justify-between items-center">
               <h3 className="text-lg text-white font-medium flex items-center">
@@ -424,7 +431,7 @@ const InjectionPage = () => {
                 {t('common_select_date')}
               </h3>
               <button onClick={() => setShowDatePicker(false)} className="text-gray-500 hover:text-white transition-colors">
-                <Receipt size={20} className="rotate-45" /> {/* Dùng icon Receipt xoay để làm nút X nếu ko muốn import X */}
+                <X size={20} />
               </button>
             </div>
             <div className="p-8">

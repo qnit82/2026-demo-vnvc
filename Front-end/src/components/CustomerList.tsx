@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
-import { Search, User, Phone, MapPin, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, User as UserIcon, Phone, MapPin, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useSelector } from 'react-redux';
+import { RootState } from '@/store';
+import { Customer } from '@/types';
+import api from '@/web-configs/api';
 
-const CustomerList = ({ onSelectCustomer }) => {
+interface CustomerListProps {
+  onSelectCustomer: (customer: Customer) => void;
+}
+
+const CustomerList: React.FC<CustomerListProps> = ({ onSelectCustomer }) => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -34,7 +40,7 @@ const CustomerList = ({ onSelectCustomer }) => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, page, user.token]);
+  }, [searchTerm, page, user?.token]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -50,7 +56,7 @@ const CustomerList = ({ onSelectCustomer }) => {
       <div className="p-4 border-b border-gray-800 space-y-4 bg-dark-card/50">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-bold text-white flex items-center">
-            <User className="mr-2 text-dark-primary" size={20} />
+            <UserIcon className="mr-2 text-dark-primary" size={20} />
             {t('existing_customers')}
           </h3>
           <span className="text-[12px] font-medium text-gray-500 bg-gray-800/50 px-2 py-1 rounded-md border border-gray-700/50 italic">
@@ -61,10 +67,10 @@ const CustomerList = ({ onSelectCustomer }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-dark-primary transition-colors" size={18} />
           <input
             type="text"
-            placeholder={t('search_customer')}
+            placeholder={t('search_customer') || 'Search customer...'}
             className="w-full bg-dark-bg border border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:border-dark-primary focus:ring-1 focus:ring-dark-primary/20 outline-none transition-all"
             value={searchTerm}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               setSearchTerm(e.target.value);
               setPage(1);
             }}
@@ -126,7 +132,7 @@ const CustomerList = ({ onSelectCustomer }) => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-2">
-            <User size={48} className="opacity-20" />
+            <UserIcon size={48} className="opacity-20" />
             <p>Không tìm thấy khách hàng</p>
           </div>
         )}

@@ -1,0 +1,2 @@
+npx tsc --noEmit
+.\node_modules\.bin\tsc --noEmit --pretty false

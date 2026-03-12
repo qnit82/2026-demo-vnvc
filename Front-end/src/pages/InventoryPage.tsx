@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   Package,
   Plus,
@@ -20,29 +19,39 @@ import {
   Upload
 } from 'lucide-react';
 import util from '@/web-configs/util';
+import { RootState } from '@/store';
+import { VaccineInventory } from '@/types';
+import api from '@/web-configs/api';
 import { AppAlert } from '@/components/AppDialogs';
 
-const InventoryPage = () => {
+interface ImportData {
+  vaccineId: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: string;
+}
+
+const InventoryPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
-  const [inventory, setInventory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedVaccine, setSelectedVaccine] = useState(null);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importData, setImportData] = useState({ vaccineId: '', batchNumber: '', expiryDate: '', quantity: '' });
-  const [submitting, setSubmitting] = useState(false);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [inventory, setInventory] = useState<VaccineInventory[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedVaccine, setSelectedVaccine] = useState<VaccineInventory | null>(null);
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
+  const [importData, setImportData] = useState<ImportData>({ vaccineId: '', batchNumber: '', expiryDate: '', quantity: '' });
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Excel Import State
-  const [showExcelModal, setShowExcelModal] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [importingExcel, setImportingExcel] = useState(false);
+  const [showExcelModal, setShowExcelModal] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importingExcel, setImportingExcel] = useState<boolean>(false);
 
   // Search Vaccine in Select State
-  const [searchVaccine, setSearchVaccine] = useState('');
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [searchVaccine, setSearchVaccine] = useState<string>('');
+  const [isSelectOpen, setIsSelectOpen] = useState<boolean>(false);
 
-  const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [alertConfig, setAlertConfig] = useState<any>({ isOpen: false, title: '', message: '', type: 'info' });
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -60,12 +69,12 @@ const InventoryPage = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, [user.token]);
+  }, [user]);
 
-  const handleImport = async (e) => {
+  const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!importData.vaccineId || !importData.batchNumber || !importData.expiryDate || !importData.quantity) {
-      setAlertConfig({ isOpen: true, type: 'warning', title: t('confirm'), message: t('missing_fields') });
+      setAlertConfig({ isOpen: true, type: 'warning', title: t('common_confirm') || 'Confirm', message: t('common_missing_info') || 'Missing fields' });
       return;
     }
 
@@ -83,13 +92,13 @@ const InventoryPage = () => {
         fetchInventory();
       }
     } catch (error) {
-      setAlertConfig({ isOpen: true, type: 'error', title: 'Error', message: t('import_failed') });
+      setAlertConfig({ isOpen: true, type: 'error', title: 'Error', message: t('inventory_import_failed') || 'Import failed' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleImportExcel = async (e) => {
+  const handleImportExcel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) return;
 
@@ -110,28 +119,28 @@ const InventoryPage = () => {
         fetchInventory();
       }
     } catch (error) {
-      setAlertConfig({ isOpen: true, type: 'error', title: 'Error', message: t('excel_failed') });
+      setAlertConfig({ isOpen: true, type: 'error', title: 'Error', message: t('inventory_excel_failed') || 'Excel import failed' });
     } finally {
       setImportingExcel(false);
     }
   };
 
-  const filteredInventory = inventory.filter(v =>
+  const filteredInventory = inventory.filter((v: VaccineInventory) =>
     v.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = {
     totalItems: inventory.length,
-    lowStock: inventory.filter(v => v.totalStock < 20).length,
+    lowStock: inventory.filter((v: VaccineInventory) => v.totalStock < 20).length,
     expiringSoon: inventory.reduce((acc, v) => acc + v.batches.filter(b => {
-      const days = (new Date(b.expiryDate) - new Date()) / (1000 * 60 * 60 * 24);
+      const days = (new Date(b.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
       return days > 0 && days < 30;
     }).length, 0),
-    outOfStock: inventory.filter(v => v.totalStock === 0).length
+    outOfStock: inventory.filter((v: VaccineInventory) => v.totalStock === 0).length
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto pb-10 px-4">
+    <div className="max-w-[1600px] mx-auto pb-10 px-4 text-white">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -197,16 +206,16 @@ const InventoryPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-380px)]">
         {/* Left: Vaccine List */}
         <div className="lg:col-span-8 flex flex-col bg-dark-card border border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-          <div className="p-5 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center">
-            <h3 className="text-[15px] text-white flex items-center font-sans tracking-wider uppercase">
+          <div className="p-5 border-b border-gray-800 bg-gray-900/50 flex justify-between items-center text-white">
+            <h3 className="text-[15px]  flex items-center font-sans tracking-wider uppercase">
               <Layers className="mr-2 text-dark-primary" size={20} />
-              {t('title').replace('Batch Details', t('vaccine_name'))}
+              {t('inventory_title')}
             </h3>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input
                 type="text"
-                placeholder={t('search') + ' ' + t('vaccines').toLowerCase() + '...'}
+                placeholder={t('common_search_placeholder') || 'Search...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-dark-bg border border-gray-700 rounded-xl py-2 pl-10 pr-4 text-xs text-gray-300 outline-none focus:border-dark-primary transition-all"
@@ -232,7 +241,7 @@ const InventoryPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
-                  {filteredInventory.map((item) => (
+                  {filteredInventory.map((item: VaccineInventory) => (
                     <tr
                       key={item.id}
                       onClick={() => setSelectedVaccine(item)}
@@ -271,10 +280,10 @@ const InventoryPage = () => {
 
         {/* Right: Chi tiết lô hàng */}
         <div className="lg:col-span-4 flex flex-col bg-dark-card border border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-          <div className="p-5 border-b border-gray-800 bg-gray-900/50">
-            <h3 className="text-[15px] text-white flex items-center tracking-wider uppercase">
+          <div className="p-5 border-b border-gray-800 bg-gray-900/50 text-white">
+            <h3 className="text-[15px]  flex items-center tracking-wider uppercase">
               <Activity className="mr-2 text-dark-primary" size={20} />
-              {t('title')}
+              {t('inventory_batch_detail_title')}
             </h3>
           </div>
 
@@ -292,7 +301,7 @@ const InventoryPage = () => {
                   {selectedVaccine.batches.map((batch) => (
                     <div
                       key={batch.batchId}
-                      className={`p-4 rounded-xl border transition-all ${batch.expiryDate < new Date().toISOString() ? 'bg-red-500/5 border-red-500/30' : 'bg-gray-800/50 border-gray-700/50'}`}
+                      className={`p-4 rounded-xl border transition-all ${new Date(batch.expiryDate) < new Date() ? 'bg-red-500/5 border-red-500/30' : 'bg-gray-800/50 border-gray-700/50'}`}
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
@@ -311,9 +320,9 @@ const InventoryPage = () => {
                           <Calendar size={14} className="mr-1.5" />
                           {t('inventory_batch_detail_expiry')}: {new Date(batch.expiryDate).toLocaleDateString('vi-VN')}
                         </div>
-                        {new Date(batch.expiryDate) < new Date() ? (
+                        {new Date(batch.expiryDate).getTime() < new Date().getTime() ? (
                           <span className="text-[11px] bg-red-500/20 text-red-500 px-2 py-0.5 rounded">{t('inventory_batch_detail_expired')}</span>
-                        ) : (new Date(batch.expiryDate) - new Date()) / (1000 * 60 * 60 * 24) < 30 ? (
+                        ) : (new Date(batch.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) < 30 ? (
                           <span className="text-[11px] bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded">{t('inventory_batch_detail_expiring_soon')}</span>
                         ) : (
                           <span className="text-[11px] bg-green-500/20 text-green-500 px-2 py-0.5 rounded">{t('inventory_batch_detail_safe')}</span>
@@ -473,7 +482,8 @@ const InventoryPage = () => {
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => {
                   e.preventDefault();
-                  if (e.dataTransfer.files?.[0]) setSelectedFile(e.dataTransfer.files[0]);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) setSelectedFile(file);
                 }}
               >
                 <Upload className={`mb-4 ${selectedFile ? 'text-green-500' : 'text-gray-500'}`} size={48} />
@@ -496,7 +506,10 @@ const InventoryPage = () => {
                     <input
                       type="file"
                       accept=".xlsx, .xls"
-                      onChange={e => setSelectedFile(e.target.files?.[0])}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) setSelectedFile(file);
+                      }}
                       className="hidden"
                       id="excel-upload"
                     />
@@ -550,13 +563,22 @@ const InventoryPage = () => {
         type={alertConfig.type}
         title={alertConfig.title}
         message={alertConfig.message}
-        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setAlertConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
 };
 
-const StatCard = ({ icon, title, value, subtitle, isWarning, isCritical }) => (
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  subtitle: string;
+  isWarning?: boolean;
+  isCritical?: boolean;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, isWarning, isCritical }) => (
   <div className={`p-6 rounded-3xl border transition-all shadow-lg hover:translate-y-[-2px] ${isCritical ? 'bg-red-500/5 border-red-500/20' :
     isWarning ? 'bg-orange-500/5 border-orange-500/20' :
       'bg-dark-card border-gray-800'

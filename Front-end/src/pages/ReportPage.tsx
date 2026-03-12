@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   TrendingUp,
   Users,
@@ -15,25 +14,27 @@ import {
   Loader2
 } from 'lucide-react';
 import util from '@/web-configs/util';
+import { ReportOverview, RevenueChartPoint, TopVaccineUsage, FunnelData } from '@/types';
+import api from '@/web-configs/api';
 
-const ReportPage = () => {
+const ReportPage: React.FC = () => {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 6)).toISOString().split('T')[0], // Last 7 days
     endDate: new Date().toISOString().split('T')[0]
   });
 
-  const [overview, setOverview] = useState({
+  const [overview, setOverview] = useState<ReportOverview>({
     totalRevenue: 0,
     totalVisits: 0,
     totalInjections: 0,
     adverseReactionRate: 0
   });
 
-  const [revenueChart, setRevenueChart] = useState([]);
-  const [topVaccines, setTopVaccines] = useState([]);
-  const [funnelData, setFunnelData] = useState({
+  const [revenueChart, setRevenueChart] = useState<RevenueChartPoint[]>([]);
+  const [topVaccines, setTopVaccines] = useState<TopVaccineUsage[]>([]);
+  const [funnelData, setFunnelData] = useState<FunnelData>({
     registered: 0,
     screened: 0,
     paid: 0,
@@ -71,7 +72,7 @@ const ReportPage = () => {
   const maxRevenue = Math.max(...revenueChart.map(d => d.amount), 1); // tránh chia cho 0
 
   return (
-    <div className="max-w-[1600px] mx-auto pb-10 px-4">
+    <div className="max-w-[1600px] mx-auto pb-10 px-4 text-white">
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-2xl text-white flex items-center">
@@ -120,7 +121,7 @@ const ReportPage = () => {
             {/* Doanh thu */}
             <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors"></div>
-              <div className="flex justify-between items-start relative z-10">
+              <div className="flex justify-between items-start relative z-10 text-white">
                 <div>
                   <p className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">{t('total_revenue')}</p>
                   <h3 className="text-3xl text-white">{util.formatVND(overview.totalRevenue)}</h3>
@@ -134,7 +135,7 @@ const ReportPage = () => {
             {/* Lượt khách */}
             <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors"></div>
-              <div className="flex justify-between items-start relative z-10">
+              <div className="flex justify-between items-start relative z-10 text-white">
                 <div>
                   <p className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">{t('total_visits')}</p>
                   <h3 className="text-3xl text-white">{overview.totalVisits} <span className="text-sm font-normal text-gray-500">{t('visits_unit')}</span></h3>
@@ -148,7 +149,7 @@ const ReportPage = () => {
             {/* Số mũi tiêm */}
             <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-green-500/10 transition-colors"></div>
-              <div className="flex justify-between items-start relative z-10">
+              <div className="flex justify-between items-start relative z-10 text-white">
                 <div>
                   <p className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">{t('total_injections')}</p>
                   <h3 className="text-3xl text-white">{overview.totalInjections} <span className="text-sm font-normal text-gray-500">{t('injections_unit')}</span></h3>
@@ -162,7 +163,7 @@ const ReportPage = () => {
             {/* Tỉ lệ phản ứng */}
             <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-orange-500/10 transition-colors"></div>
-              <div className="flex justify-between items-start relative z-10">
+              <div className="flex justify-between items-start relative z-10 text-white">
                 <div>
                   <p className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">{t('adverse_rate')}</p>
                   <h3 className="text-3xl text-white">{overview.adverseReactionRate}%</h3>
@@ -176,7 +177,7 @@ const ReportPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 2. Biểu đồ doanh thu */}
-            <div className="lg:col-span-2 bg-dark-card border border-gray-800 rounded-2xl p-6">
+            <div className="lg:col-span-2 bg-dark-card border border-gray-800 rounded-2xl p-6 text-white">
               <h3 className="text-lg text-white mb-6 flex items-center">
                 <Activity className="mr-2 text-dark-primary" size={20} />
                 {t('revenue_chart')}
@@ -210,7 +211,7 @@ const ReportPage = () => {
             </div>
 
             {/* 3. Phễu khách hàng */}
-            <div className="bg-dark-card border border-gray-800 rounded-2xl p-6">
+            <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 text-white">
               <h3 className="text-lg text-white mb-6 flex items-center">
                 <PieChart className="mr-2 text-indigo-400" size={20} />
                 {t('funnel_title')}
@@ -246,7 +247,7 @@ const ReportPage = () => {
           </div>
 
           {/* 4. Top Vaccines */}
-          <div className="bg-dark-card border border-gray-800 rounded-2xl p-6">
+          <div className="bg-dark-card border border-gray-800 rounded-2xl p-6 text-white">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg text-white flex items-center">
                 <Syringe className="mr-2 text-green-400" size={20} />
@@ -281,7 +282,7 @@ const ReportPage = () => {
               </div>
             ) : (
               <div className="text-center py-10 text-gray-500 italic">
-                {t('no_vaccine_data')}
+                {t('no_vaccine_data') || 'No vaccine data available'}
               </div>
             )}
           </div>

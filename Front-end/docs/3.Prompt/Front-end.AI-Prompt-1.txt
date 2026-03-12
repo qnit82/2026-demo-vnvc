@@ -1,0 +1,10 @@
+Chào AI. bạn hãy làm việc với mình bằng tiếng việt nhé. Đây là bộ source code front-end.
+1 Dự án làm chương trình Demo Web-app quản lý tiêm chủng rất chuyên nghiệp.
+Bạn hãy đọc Code để hiểu Business Analysis và System Design nhé.
+Khi bạn hiểu rồi thì hãy Xuất ra 1 file .md Sau đó ta sẽ làm các việc tiếp theo.
+---
+OK. Rất vui vì bạn đã hiểu bản chất của dự án. Dự án này là 1 bộ code mình làm để vừa muốn ôn tập kiến thức,
+sau 1 thời gian dài không đi làm. Sắp tới đây mình sẽ trải qua quá trình interview bên cty VNVC. Nên mình cần hỏi bạn 1 số vấn đề sau.
+1. Với Front-end react-js họ thường sẽ phỏng vấn những gì, mình cần chuẩn bị những kiến thức gì.
+Bạn hãy tư vấn mình cần học những gì cho front-end nhé. Hãy xuất ra nội dung bạn tư vấn bằng 1 file .md
+---

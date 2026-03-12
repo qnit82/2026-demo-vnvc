@@ -1,16 +1,17 @@
-import axios from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import util from './util';
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
     baseURL: util.apiUrl,
 });
 
 // Request interceptor để tự động gắn Token vào Header
 api.interceptors.request.use(
-    (config) => {
-        const user = JSON.parse(localStorage.getItem('user'));
+    (config: InternalAxiosRequestConfig) => {
+        const storedUser = localStorage.getItem('user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
 
-        if (user && user.token) {
+        if (user && user.token && config.headers) {
             config.headers.Authorization = `Bearer ${user.token}`;
         }
         return config;

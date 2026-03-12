@@ -2,7 +2,15 @@ import React, { useEffect } from 'react';
 import { X, AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const AppAlert = ({
+interface AppAlertProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  message: string;
+  type?: 'info' | 'success' | 'error' | 'warning';
+}
+
+const AppAlert: React.FC<AppAlertProps> = ({
   isOpen,
   onClose,
   title,
@@ -13,7 +21,7 @@ const AppAlert = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -63,7 +71,17 @@ const AppAlert = ({
   );
 };
 
-const AppConfirm = ({
+interface AppConfirmProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+const AppConfirm: React.FC<AppConfirmProps> = ({
   isOpen,
   onClose,
   onConfirm,
@@ -76,7 +94,7 @@ const AppConfirm = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();

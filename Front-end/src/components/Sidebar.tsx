@@ -16,12 +16,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { logout } from '@/store/authSlice';
+import { RootState, AppDispatch } from '@/store';
 
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+const Sidebar: React.FC = () => {
+  const [isOpen, setIsOpen] = useState<boolean>(true);
   const { t } = useTranslation();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const menuItems = [
     { path: '/', icon: <LayoutDashboard size={20} />, label: t('dashboard') },

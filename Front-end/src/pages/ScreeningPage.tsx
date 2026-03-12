@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   Users,
   Search,
@@ -21,24 +20,59 @@ import {
   Zap,
   ChevronLeft
 } from 'lucide-react';
+import api from '@/web-configs/api';
 import { AppAlert, AppConfirm } from '@/components/AppDialogs';
+import { ScreeningVisit, Vaccine } from '@/types';
+
+interface PaginationState {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
+interface ScreeningFormData {
+  [key: string]: string | number | boolean | string[];
+  temperature: string | number;
+  weight: string | number;
+  height: string | number;
+  heartRate: string | number;
+  respiratoryRate: string | number;
+  bloodPressure: string;
+  clinicalAssessment: string;
+  isEligible: boolean;
+  doctorNote: string;
+  vaccineIds: string[];
+}
+
+interface AlertConfig {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'info' | 'error' | 'success' | 'warning';
+}
+
+interface ConfirmConfig {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
 
 const ScreeningPage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState(0); // 0: Chờ khám, 1: Đã khám
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 8, totalCount: 0 });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<number>(0); // 0: Chờ khám, 1: Đã khám
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [pagination, setPagination] = useState<PaginationState>({ page: 1, pageSize: 8, totalCount: 0 });
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const [queue, setQueue] = useState([]);
-  const [loadingQueue, setLoadingQueue] = useState(false);
-  const [selectedVisit, setSelectedVisit] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [queue, setQueue] = useState<ScreeningVisit[]>([]);
+  const [loadingQueue, setLoadingQueue] = useState<boolean>(false);
+  const [selectedVisit, setSelectedVisit] = useState<ScreeningVisit | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ScreeningFormData>({
     temperature: '',
     weight: '',
     height: '',
@@ -51,10 +85,10 @@ const ScreeningPage = () => {
     vaccineIds: []
   });
 
-  const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
-  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [alertConfig, setAlertConfig] = useState<AlertConfig>({ isOpen: false, title: '', message: '', type: 'info' });
+  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
-  const fetchQueue = useCallback(async (page = pagination.page, tab = activeTab, date = selectedDate, search = searchTerm) => {
+  const fetchQueue = useCallback(async (page: number = pagination.page, tab: number = activeTab, date: string = selectedDate, search: string = searchTerm) => {
     setLoadingQueue(true);
     try {
       const response = await api.get('/screening/queue', {
@@ -74,12 +108,12 @@ const ScreeningPage = () => {
           page: response.data.data.page || 1
         }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching queue:', error);
     } finally {
       setLoadingQueue(false);
     }
-  }, [activeTab, selectedDate, pagination.page]);
+  }, [activeTab, selectedDate, pagination.page, searchTerm]);
 
   useEffect(() => {
     fetchQueue(1, activeTab, selectedDate, searchTerm);
@@ -90,13 +124,12 @@ const ScreeningPage = () => {
     return () => clearInterval(interval);
   }, [fetchQueue, pagination.page, activeTab, selectedDate, searchTerm]);
 
-  const handleSelectVisit = async (visit) => {
-    setLoadingDetail(true);
+  const handleSelectVisit = async (visit: ScreeningVisit) => {
     try {
       const response = await api.get(`/screening/${visit.visitId}`);
       if (response.data.success) {
         const detail = response.data.data;
-        setSelectedVisit(detail);
+        setSelectedVisit({ ...detail, visitId: visit.visitId });
         setFormData({
           temperature: detail.hasScreeningResult ? detail.temperature : '',
           weight: detail.hasScreeningResult ? detail.weight : '',
@@ -107,25 +140,24 @@ const ScreeningPage = () => {
           clinicalAssessment: detail.hasScreeningResult ? detail.clinicalAssessment : '',
           isEligible: detail.hasScreeningResult ? detail.isEligible : true,
           doctorNote: detail.hasScreeningResult ? detail.doctorNote : '',
-          vaccineIds: detail.preSelectedVaccines.map(v => v.vaccineId)
+          vaccineIds: detail.preSelectedVaccines.map((v: Vaccine) => v.vaccineId)
         });
       }
     } catch (error) {
       console.error('Error fetching visit detail:', error);
-    } finally {
-      setLoadingDetail(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleQuickFill = (isEligible) => {
+  const handleQuickFill = (isEligible: boolean) => {
     if (!selectedVisit) return;
 
     if (isEligible) {
@@ -168,22 +200,25 @@ const ScreeningPage = () => {
         setSubmitting(true);
         try {
           // Dọn dẹp các field số: chuyển "" thành null
-          const cleanedData = { ...formData };
+          const cleanedData: any = { ...formData };
           ['temperature', 'weight', 'height', 'heartRate', 'respiratoryRate'].forEach(field => {
-            if (cleanedData[field] === '') cleanedData[field] = null;
-            else cleanedData[field] = parseFloat(cleanedData[field]);
+            if (cleanedData[field] === '') {
+              cleanedData[field] = null;
+            } else {
+              cleanedData[field] = parseFloat(cleanedData[field] as string);
+            }
           });
 
           const response = await api.post('/screening/save', {
             ...cleanedData,
-            visitId: selectedVisit.id
+            visitId: selectedVisit.visitId
           });
 
           if (response.data.success) {
             setSelectedVisit(null);
             fetchQueue();
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Save screening failed:', error);
           const errorMsg = error.response?.data?.message || 'Không thể lưu kết quả. Vui lòng thử lại.';
           setAlertConfig({
@@ -264,7 +299,7 @@ const ScreeningPage = () => {
                   <div
                     key={item.visitId}
                     onClick={() => handleSelectVisit(item)}
-                    className={`p-4 cursor-pointer transition-all hover:bg-gray-800/50 group relative border-l-4 ${selectedVisit?.id === item.visitId ? 'border-dark-primary bg-dark-primary/5' : 'border-transparent'
+                    className={`p-4 cursor-pointer transition-all hover:bg-gray-800/50 group relative border-l-4 ${selectedVisit?.visitId === item.visitId ? 'border-dark-primary bg-dark-primary/5' : 'border-transparent'
                       }`}
                   >
                     <div className="flex justify-between items-start mb-1">
@@ -411,7 +446,7 @@ const ScreeningPage = () => {
                         <input
                           type="text"
                           name={field.name}
-                          value={formData[field.name]}
+                          value={formData[field.name] as string | number}
                           onChange={handleInputChange}
                           placeholder={field.placeholder}
                           disabled={activeTab === 1}
@@ -434,7 +469,7 @@ const ScreeningPage = () => {
                         <label className="text-[12px] font-bold text-gray-500 uppercase">{t('screening_general_eval')}</label>
                         <textarea
                           name="clinicalAssessment"
-                          value={formData.clinicalAssessment}
+                          value={formData.clinicalAssessment as string}
                           onChange={handleInputChange}
                           disabled={activeTab === 1}
                           rows={4}
@@ -446,7 +481,7 @@ const ScreeningPage = () => {
                         <label className="text-[12px] font-bold text-gray-500 uppercase">{t('screening_doctor_notes')}</label>
                         <textarea
                           name="doctorNote"
-                          value={formData.doctorNote}
+                          value={formData.doctorNote as string}
                           onChange={handleInputChange}
                           disabled={activeTab === 1}
                           rows={3}

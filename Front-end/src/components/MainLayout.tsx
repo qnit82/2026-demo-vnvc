@@ -1,21 +1,21 @@
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import Sidebar from '@/components/Sidebar';
-import api from '@/web-configs/api';
 import { logout } from '@/store/authSlice';
+import { AppDispatch } from '@/store';
+import api from '@/web-configs/api';
+import Sidebar from '@/components/Sidebar';
 
-const MainLayout = () => {
+const MainLayout: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     const verifyAuth = async () => {
       try {
         await api.get('/auth/verify');
-      } catch (error) {
-        // Interceptor đã xử lý redirect nếu là 401, nhưng ở đây user yêu cầu xử lý ngay tại layout
-        // và nhắc đến 404.
+      } catch (error: any) {
+        // Interceptor đã xử lý redirect nếu là 401
         if (error.response?.status === 401 || error.response?.status === 404) {
           dispatch(logout());
           navigate('/login');

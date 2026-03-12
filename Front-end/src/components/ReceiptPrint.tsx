@@ -1,12 +1,18 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import util from '@/web-configs/util';
+import { Invoice } from '@/types';
 
-const ReceiptPrint = ({ invoice, isPreviewLine = false }) => {
+interface ReceiptPrintProps {
+  invoice: Invoice | null;
+  isPreviewLine?: boolean;
+}
+
+const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, isPreviewLine = false }) => {
   const { t } = useTranslation();
   if (!invoice) return null;
 
-  const getStatusDisplay = (status) => {
+  const getStatusDisplay = (status: number) => {
     switch (status) {
       case 1: // Paid
         return { label: t('status_paid'), color: 'text-green-600', dot: 'bg-green-500' };
@@ -108,7 +114,7 @@ const ReceiptPrint = ({ invoice, isPreviewLine = false }) => {
           </tbody>
           <tfoot>
             <tr className="bg-gray-50/50">
-              <td colSpan="4" className="px-3 py-2 text-right font-normal uppercase text-[9px] text-gray-500">{t('total_amount')}</td>
+              <td colSpan={4} className="px-3 py-2 text-right font-normal uppercase text-[9px] text-gray-500">{t('total_amount')}</td>
               <td className="px-3 py-2 text-right text-[14px] font-normal font-mono text-blue-900 border-b border-blue-900">{util.formatVND(invoice.totalAmount)}</td>
             </tr>
           </tfoot>

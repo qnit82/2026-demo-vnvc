@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import api from '@/web-configs/api';
 import {
   Loader2,
   CreditCard,
@@ -19,26 +17,27 @@ import {
   ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import util from '@/web-configs/util';
+import { PaymentQueueItem, Invoice } from '@/types';
+import api from '@/web-configs/api';
 import { AppAlert, AppConfirm } from '@/components/AppDialogs';
 import ReceiptPrint from '@/components/ReceiptPrint';
 
-const PaymentPage = () => {
+const PaymentPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useSelector((state) => state.auth);
-  const [queue, setQueue] = useState([]);
-  const [loadingQueue, setLoadingQueue] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState(0); // 0: Chờ thanh toán, 1: Đã thanh toán
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [queue, setQueue] = useState<PaymentQueueItem[]>([]);
+  const [loadingQueue, setLoadingQueue] = useState<boolean>(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<number>(0); // 0: Chờ thanh toán, 1: Đã thanh toán
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 8, totalCount: 0 });
 
-  const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
-  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [alertConfig, setAlertConfig] = useState<any>({ isOpen: false, title: '', message: '', type: 'info' });
+  const [confirmConfig, setConfirmConfig] = useState<any>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
 
   const fetchQueue = async (page = pagination.page, tab = activeTab, date = selectedDate) => {
     setLoadingQueue(true);
@@ -75,7 +74,7 @@ const PaymentPage = () => {
     return () => clearInterval(interval);
   }, [pagination.page, activeTab, selectedDate]);
 
-  const handleSelectVisit = async (visit) => {
+  const handleSelectVisit = async (visit: { visitId: string }) => {
     setLoadingDetail(true);
     try {
       const response = await api.get(`/payment/${visit.visitId}`);
@@ -94,7 +93,7 @@ const PaymentPage = () => {
 
     setConfirmConfig({
       isOpen: true,
-      title: t('payment_confirm_payment_title'),
+      title: t('payment_confirm_payment_title') || 'Confirm Payment',
       message: t('payment_confirm_payment_msg', 'Xác nhận khách hàng {{name}} đã thanh toán số tiền {{amount}}?', { name: selectedInvoice.fullName, amount: util.formatVND(selectedInvoice.totalAmount) }),
       onConfirm: async () => {
         setSubmitting(true);
@@ -114,8 +113,8 @@ const PaymentPage = () => {
           setAlertConfig({
             isOpen: true,
             type: 'error',
-            title: t('common_error'),
-            message: t('payment_confirm_payment_error')
+            title: t('common_error') || 'Error',
+            message: t('payment_confirm_payment_error') || 'Confirmation failed'
           });
         } finally {
           setSubmitting(false);
@@ -130,7 +129,6 @@ const PaymentPage = () => {
 
   return (
     <>
-      {/* UI chính - Ẩn khi in */}
       <div className="max-w-[1600px] mx-auto pb-10 px-4 no-print">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-120px)]">
 
@@ -177,7 +175,7 @@ const PaymentPage = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input
                   type="text"
-                  placeholder={t('common_search_placeholder')}
+                  placeholder={t('common_search_placeholder') || 'Search...'}
                   className="w-full bg-dark-bg/80 border border-gray-700/50 rounded-2xl py-2.5 pl-10 pr-4 text-sm text-gray-300 focus:border-dark-primary outline-none transition-all shadow-inner"
                 />
               </div>
@@ -322,7 +320,7 @@ const PaymentPage = () => {
                         </tbody>
                         <tfoot>
                           <tr className="bg-indigo-500/5">
-                            <td colSpan="3" className="px-6 py-6 text-right text-gray-400 uppercase text-[12px]">{t('payment_total_service_fee')}</td>
+                            <td colSpan={3} className="px-6 py-6 text-right text-gray-400 uppercase text-[12px]">{t('payment_total_service_fee')}</td>
                             <td className="px-6 py-6 text-right text-2xl text-white">{util.formatVND(selectedInvoice.totalAmount)}</td>
                           </tr>
                         </tfoot>
@@ -395,11 +393,11 @@ const PaymentPage = () => {
 
       <AppAlert
         {...alertConfig}
-        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setAlertConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
       <AppConfirm
         {...confirmConfig}
-        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setConfirmConfig((prev: any) => ({ ...prev, isOpen: false }))}
       />
 
       {/* Component in phiếu thu - Chỉ hiện khi in */}
@@ -412,7 +410,7 @@ const PaymentPage = () => {
             <button
               onClick={() => setShowPreview(false)}
               className="absolute -right-16 top-0 bg-white/10 hover:bg-white/20 text-white p-4 rounded-full transition-all backdrop-blur-md"
-              title={t('common_close')}
+              title={t('common_close') || 'Close'}
             >
               <X size={32} />
             </button>

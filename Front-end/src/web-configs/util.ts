@@ -1,6 +1,7 @@
 const releaseMode = true;
 
 const util = {
+    //apiUrl: releaseMode ? 'https://api-demo-app.ivoca.asia/api' : 'https://localhost:7298/api',
     apiUrl: releaseMode ? 'https://api-demo-app.ivoca.asia/api' : 'http://localhost:5276/api',
     formatVND: (amount: number) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
